@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=1920, initial-scale=1.0">
+  <title>Foxifilm - Filmdetails</title>
+  <style type="text/css">
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #000000;
+      color: #ffffff;
+      font-family: Arial, Helvetica, sans-serif;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .detail-stage {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: #000000;
+    }
+    .poster-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 95vh;
+      width: 63.3333vh;
+      background-color: #111111;
+      overflow: hidden;
+      z-index: 1;
+    }
+    .poster-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .poster-fade-right {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 18vh;
+      height: 100%;
+      background: -webkit-linear-gradient(left, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.72) 55%, #000000 100%);
+      background: linear-gradient(to right, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.72) 55%, #000000 100%);
+      pointer-events: none;
+    }
+    .poster-fade-bottom {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 22vh;
+      background: -webkit-linear-gradient(top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.78) 58%, #000000 100%);
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.78) 58%, #000000 100%);
+      pointer-events: none;
+    }
+    .info-panel {
+      position: absolute;
+      top: 10vh;
+      left: calc(53vh + 201px);
+      right: 5vw;
+      z-index: 10;
+    }
+    .film-title {
+      color: #ffffff;
+      font-size: 5.6vh;
+      font-weight: bold;
+      line-height: 1.15;
+      margin-bottom: 1.8vh;
+    }
+    .meta-row {
+      color: #ff5500;
+      font-size: 2.5vh;
+      font-weight: bold;
+      margin-bottom: 3.2vh;
+      letter-spacing: 0.03em;
+    }
+    .film-description {
+      color: #ffffff;
+      font-size: 2.6vh;
+      line-height: 1.5;
+      max-width: 52vw;
+    }
+    .action-buttons {
+      position: absolute;
+      bottom: 8vh;
+      left: calc(53vh + 201px);
+      z-index: 10;
+    }
+    .action-btn {
+      display: inline-block;
+      background-color: #161616;
+      color: #ffffff;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 2.7vh;
+      font-weight: bold;
+      padding: 2vh 4.2vh;
+      margin-right: 2.2vw;
+      border-radius: 8px;
+      border: 3px solid rgba(255, 255, 255, 0.25);
+      outline: none !important;
+      transition: none;
+      cursor: pointer;
+    }
+    .action-btn::-moz-focus-inner {
+      border: 0;
+    }
+    .action-btn.is-focused {
+      border: 3px solid #ffd700 !important;
+      box-shadow: 0 0 18px rgba(255, 215, 0, 0.65) !important;
+    }
+    .brand-logo-wrapper {
+      position: absolute;
+      right: 5vw;
+      bottom: 8vh;
+      height: 18vh;
+      z-index: 10;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .brand-logo-wrapper::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      box-shadow: inset 0 0 12px 6px #000000;
+      pointer-events: none;
+    }
+    .brand-logo {
+      height: 18vh;
+      width: auto;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="detail-stage">
+    <div class="poster-wrapper">
+      <img id="detail-poster" src="Asiabild.jpeg" alt="Filmposter">
+      <div class="poster-fade-right"></div>
+      <div class="poster-fade-bottom"></div>
+    </div>
+
+    <div class="info-panel">
+      <h1 class="film-title" id="detail-title">Filmtitel Platzhalter</h1>
+      <div class="meta-row" id="detail-meta">Action &bull; Spielfilm &bull; 118 Min. &bull; FSK 12</div>
+      <p class="film-description" id="detail-description">
+        Hier erscheint die ausf&uuml;hrliche Beschreibung des ausgew&auml;hlten Films. Spannende Handlung, eindrucksvolle Bilder und packende Momente direkt in deinem Wohnzimmer auf Foxifilm.
+      </p>
+    </div>
+
+    <div class="action-buttons">
+      <button type="button" class="action-btn" id="btn-play">Abspielen</button>
+      <button type="button" class="action-btn" id="btn-preview">Vorschau</button>
+    </div>
+
+    <div class="brand-logo-wrapper">
+      <img class="brand-logo" src="Foxilogo.png.png" alt="Foxifilm">
+    </div>
+  </div>
+
+  <script type="text/javascript">
+    var buttons = [];
+    var currentIndex = 0;
+
+    function clearAllFocus() {
+      var i;
+      if (document.activeElement && document.activeElement.blur) {
+        document.activeElement.blur();
+      }
+      for (i = 0; i < buttons.length; i++) {
+        buttons[i].className = 'action-btn';
+      }
+    }
+
+    function setMainFocus(index) {
+      if (index < 0) {
+        index = 0;
+      }
+      if (index >= buttons.length) {
+        index = buttons.length - 1;
+      }
+      clearAllFocus();
+      currentIndex = index;
+      buttons[currentIndex].className = 'action-btn is-focused';
+    }
+
+    function triggerButton(index) {
+      if (index === 0) {
+        window.location.href = 'player.html?mode=full';
+      } else if (index === 1) {
+        window.location.href = 'player.html?mode=preview';
+      }
+    }
+
+    function bindButtonEvents(btn, idx) {
+      btn.onmouseenter = function () {
+        setMainFocus(idx);
+      };
+      btn.onmouseleave = function () {
+        clearAllFocus();
+      };
+      btn.onblur = function () {
+        clearAllFocus();
+      };
+      btn.onclick = function () {
+        triggerButton(idx);
+      };
+    }
+
+    function initPage() {
+      var btnPlay = document.getElementById('btn-play');
+      var btnPreview = document.getElementById('btn-preview');
+      buttons = [btnPlay, btnPreview];
+      bindButtonEvents(btnPlay, 0);
+      bindButtonEvents(btnPreview, 1);
+      setMainFocus(0);
+    }
+
+    function handleKeyDown(e) {
+      var evt = e || window.event;
+      var code = evt.keyCode || evt.which;
+
+      if (code === 37 || evt.key === 'ArrowLeft') {
+        if (evt.preventDefault) { evt.preventDefault(); }
+        setMainFocus(0);
+      } else if (code === 39 || evt.key === 'ArrowRight') {
+        if (evt.preventDefault) { evt.preventDefault(); }
+        setMainFocus(1);
+      } else if (code === 13 || evt.key === 'Enter') {
+        if (evt.preventDefault) { evt.preventDefault(); }
+        triggerButton(currentIndex);
+      } else if (code === 8 || code === 27 || code === 4 || code === 461 || code === 10009 || evt.key === 'Backspace' || evt.key === 'Escape') {
+        if (evt.preventDefault) { evt.preventDefault(); }
+        window.history.back();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown, false);
+    document.onkeydown = handleKeyDown;
+
+    window.onload = function () {
+      window.focus();
+      initPage();
+    };
+  </script>
+</body>
+</html>

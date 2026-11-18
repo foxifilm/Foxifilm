@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Foxifilm - Serien</title>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    background-color: #000000;
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #stage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1920px;
+    height: 1080px;
+    margin-left: -960px;
+    margin-top: -540px;
+    background-color: #000000;
+    overflow: hidden;
+    transform-origin: center center;
+  }
+
+  .safe-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding: 40px 44px;
+  }
+
+  /* Kopfbereich: Logo & Seitentitel */
+  .header-bar {
+    position: relative;
+    width: 1832px;
+    height: 110px;
+    margin-bottom: 24px;
+  }
+
+  .brand-logo {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    height: 96px;
+    width: auto;
+    margin-top: -48px;
+    border: none;
+    outline: none;
+  }
+
+  .page-title {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    margin-top: -32px;
+    font-size: 56px;
+    font-weight: bold;
+    color: #ffffff;
+    letter-spacing: 1.5px;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  /* Viewport für das 7x5-Raster (2 sichtbare Reihen à 7 Kacheln 256x384px) */
+  .grid-viewport {
+    position: relative;
+    width: 1832px;
+    height: 792px;
+    overflow: visible;
+  }
+
+  #poster-grid {
+    position: relative;
+    width: 1832px;
+    transition: transform 0.25s ease-out;
+    -webkit-transition: -webkit-transform 0.25s ease-out;
+  }
+
+  .poster-row {
+    width: 1832px;
+    height: 384px;
+    margin-bottom: 24px;
+    font-size: 0;
+  }
+
+  .poster-btn {
+    position: relative;
+    display: inline-block;
+    vertical-align: top;
+    width: 256px;
+    height: 384px;
+    margin-right: 6px;
+    background-color: #111111;
+    border: 4px solid #222222;
+    border-radius: 8px;
+    outline: none;
+    cursor: pointer;
+    overflow: hidden;
+    padding: 0;
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+    transition: none;
+    -webkit-transition: none;
+  }
+
+  .poster-btn.last-in-row {
+    margin-right: 0;
+  }
+
+  .poster-btn img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border: none;
+    pointer-events: none;
+  }
+
+  .poster-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #1b1b1b 0%, #0b0b0b 100%);
+    pointer-events: none;
+  }
+
+  .poster-number {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #777777;
+    background-color: rgba(0, 0, 0, 0.65);
+    padding: 4px 10px;
+    border-radius: 4px;
+  }
+
+  .poster-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 32px 12px 14px 12px;
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.92) 75%);
+    font-size: 20px;
+    font-weight: bold;
+    color: #ffffff;
+    text-align: center;
+    line-height: 1.2;
+    pointer-events: none;
+  }
+
+  /* Goldener Fokus-Rahmen ohne Verzögerung */
+  .poster-btn.is-focused {
+    border: 4px solid #ffd700;
+    box-shadow: 0 0 22px rgba(255, 215, 0, 0.85);
+    z-index: 20;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div class="safe-area">
+      <div class="header-bar">
+        <img class="brand-logo" src="Foxilogo.png.png" alt="Foxifilm Logo">
+        <h1 class="page-title">Serien</h1>
+      </div>
+
+      <div class="grid-viewport">
+        <div id="poster-grid"></div>
+      </div>
+    </div>
+  </div>
+
+<script type="text/javascript">
+(function() {
+  var COLS = 7;
+  var ROW_STEP = 408; // 384px Kartenhöhe + 24px Reihenabstand
+  var VISIBLE_ROWS = 2;
+
+  var itemsData = [
+    { id: "ser-01", title: "Serie 1", poster: "" },
+    { id: "ser-02", title: "Serie 2", poster: "" },
+    { id: "ser-03", title: "Serie 3", poster: "" },
+    { id: "ser-04", title: "Serie 4", poster: "" },
+    { id: "ser-05", title: "Serie 5", poster: "" },
+    { id: "ser-06", title: "Serie 6", poster: "" },
+    { id: "ser-07", title: "Serie 7", poster: "" },
+    { id: "ser-08", title: "Serie 8", poster: "" },
+    { id: "ser-09", title: "Serie 9", poster: "" },
+    { id: "ser-10", title: "Serie 10", poster: "" },
+    { id: "ser-11", title: "Serie 11", poster: "" },
+    { id: "ser-12", title: "Serie 12", poster: "" },
+    { id: "ser-13", title: "Serie 13", poster: "" },
+    { id: "ser-14", title: "Serie 14", poster: "" },
+    { id: "ser-15", title: "Serie 15", poster: "" },
+    { id: "ser-16", title: "Serie 16", poster: "" },
+    { id: "ser-17", title: "Serie 17", poster: "" },
+    { id: "ser-18", title: "Serie 18", poster: "" },
+    { id: "ser-19", title: "Serie 19", poster: "" },
+    { id: "ser-20", title: "Serie 20", poster: "" },
+    { id: "ser-21", title: "Serie 21", poster: "" },
+    { id: "ser-22", title: "Serie 22", poster: "" },
+    { id: "ser-23", title: "Serie 23", poster: "" },
+    { id: "ser-24", title: "Serie 24", poster: "" },
+    { id: "ser-25", title: "Serie 25", poster: "" },
+    { id: "ser-26", title: "Serie 26", poster: "" },
+    { id: "ser-27", title: "Serie 27", poster: "" },
+    { id: "ser-28", title: "Serie 28", poster: "" },
+    { id: "ser-29", title: "Serie 29", poster: "" },
+    { id: "ser-30", title: "Serie 30", poster: "" },
+    { id: "ser-31", title: "Serie 31", poster: "" },
+    { id: "ser-32", title: "Serie 32", poster: "" },
+    { id: "ser-33", title: "Serie 33", poster: "" },
+    { id: "ser-34", title: "Serie 34", poster: "" },
+    { id: "ser-35", title: "Serie 35", poster: "" }
+  ];
+
+  var stage = document.getElementById("stage");
+  var gridEl = document.getElementById("poster-grid");
+  var buttons = [];
+  var currentIndex = 0;
+  var topVisibleRow = 0;
+
+  function scaleStage() {
+    var winW = window.innerWidth || document.documentElement.clientWidth || 1920;
+    var winH = window.innerHeight || document.documentElement.clientHeight || 1080;
+    var scaleX = winW / 1920;
+    var scaleY = winH / 1080;
+    var scale = scaleX < scaleY ? scaleX : scaleY;
+    var transformValue = "scale(" + scale + ")";
+    stage.style.webkitTransform = transformValue;
+    stage.style.msTransform = transformValue;
+    stage.style.transform = transformValue;
+  }
+
+  function clearAllFocus() {
+    var i;
+    for (i = 0; i < buttons.length; i++) {
+      buttons[i].className = buttons[i].className.replace(/\bis-focused\b/g, "").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+      if (document.activeElement === buttons[i]) {
+        buttons[i].blur();
+      }
+    }
+  }
+
+  function updateGridScroll(index) {
+    var totalRows = Math.ceil(buttons.length / COLS);
+    var activeRow = Math.floor(index / COLS);
+
+    if (activeRow < topVisibleRow) {
+      topVisibleRow = activeRow;
+    } else if (activeRow >= topVisibleRow + VISIBLE_ROWS) {
+      topVisibleRow = activeRow - VISIBLE_ROWS + 1;
+    }
+
+    if (topVisibleRow < 0) {
+      topVisibleRow = 0;
+    }
+    if (totalRows > VISIBLE_ROWS && topVisibleRow > totalRows - VISIBLE_ROWS) {
+      topVisibleRow = totalRows - VISIBLE_ROWS;
+    }
+
+    var offsetY = -(topVisibleRow * ROW_STEP);
+    var transformVal = "translateY(" + offsetY + "px)";
+    gridEl.style.webkitTransform = transformVal;
+    gridEl.style.msTransform = transformVal;
+    gridEl.style.transform = transformVal;
+  }
+
+  function setFocus(index) {
+    if (buttons.length === 0) {
+      return;
+    }
+    if (index < 0) {
+      index = 0;
+    }
+    if (index >= buttons.length) {
+      index = buttons.length - 1;
+    }
+
+    clearAllFocus();
+    currentIndex = index;
+
+    var btn = buttons[currentIndex];
+    btn.className = btn.className + " is-focused";
+    btn.focus();
+    updateGridScroll(currentIndex);
+  }
+
+  function handleActivate(index) {
+    var item = itemsData[index];
+    if (!item) {
+      return;
+    }
+    window.location.href = "detail.html?id=" + item.id;
+  }
+
+  function goBack() {
+    window.history.back();
+  }
+
+  function buildGrid() {
+    var total = itemsData.length;
+    var rowDiv = null;
+    var i;
+
+    for (i = 0; i < total; i++) {
+      if (i % COLS === 0) {
+        rowDiv = document.createElement("div");
+        rowDiv.className = "poster-row";
+        gridEl.appendChild(rowDiv);
+      }
+
+      var item = itemsData[i];
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "poster-btn" + ((i % COLS === COLS - 1) ? " last-in-row" : "");
+      btn.setAttribute("data-index", String(i));
+
+      var placeholder = document.createElement("div");
+      placeholder.className = "poster-placeholder";
+      btn.appendChild(placeholder);
+
+      var numBadge = document.createElement("span");
+      numBadge.className = "poster-number";
+      numBadge.appendChild(document.createTextNode(String(i + 1)));
+      btn.appendChild(numBadge);
+
+      if (item.poster && item.poster !== "") {
+        var img = document.createElement("img");
+        img.src = item.poster;
+        img.alt = item.title;
+        btn.appendChild(img);
+      }
+
+      var caption = document.createElement("div");
+      caption.className = "poster-caption";
+      caption.appendChild(document.createTextNode(item.title));
+      btn.appendChild(caption);
+
+      (function(idx, el) {
+        el.onmouseenter = function() {
+          clearAllFocus();
+          currentIndex = idx;
+          el.className = el.className + " is-focused";
+          updateGridScroll(idx);
+        };
+        el.onmouseleave = function() {
+          clearAllFocus();
+        };
+        el.onclick = function() {
+          setFocus(idx);
+          handleActivate(idx);
+        };
+      })(i, btn);
+
+      rowDiv.appendChild(btn);
+      buttons.push(btn);
+    }
+  }
+
+  document.onkeydown = function(e) {
+    var evt = e || window.event;
+    var keyCode = evt.keyCode || evt.which;
+
+    // Zurück-Tasten (Backspace, Escape, Fire TV, LG, Samsung)
+    if (keyCode === 8 || keyCode === 27 || keyCode === 4 || keyCode === 461 || keyCode === 10009) {
+      if (evt.preventDefault) {
+        evt.preventDefault();
+      }
+      goBack();
+      return false;
+    }
+
+    // Links (37)
+    if (keyCode === 37) {
+      if (evt.preventDefault) {
+        evt.preventDefault();
+      }
+      if (currentIndex % COLS > 0) {
+        setFocus(currentIndex - 1);
+      }
+      return false;
+    }
+
+    // Hoch (38)
+    if (keyCode === 38) {
+      if (evt.preventDefault) {
+        evt.preventDefault();
+      }
+      if (currentIndex - COLS >= 0) {
+        setFocus(currentIndex - COLS);
+      }
+      return false;
+    }
+
+    // Rechts (39)
+    if (keyCode === 39) {
+      if (evt.preventDefault) {
+        evt.preventDefault();
+      }
+      if (currentIndex % COLS < COLS - 1 && currentIndex + 1 < buttons.length) {
+        setFocus(currentIndex + 1);
+      }
+      return false;
+    }
+
+    // Runter (40)
+    if (keyCode === 40) {
+      if (evt.preventDefault) {
+        evt.preventDefault();
+      }
+      if (currentIndex + COLS < buttons.length) {
+        setFocus(currentIndex + COLS);
+      }
+      return false;
+    }
+
+    // OK / Enter (13)
+    if (keyCode === 13) {
+      if (evt.preventDefault) {
+        evt.preventDefault();
+      }
+      handleActivate(currentIndex);
+      return false;
+    }
+  };
+
+  window.onresize = scaleStage;
+
+  scaleStage();
+  buildGrid();
+  setFocus(0);
+})();
+</script>
+</body>
+</html>

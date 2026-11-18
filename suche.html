@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foxifilm - Suche</title>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  html, body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background-color: #000000;
+    color: #ffffff;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+
+  .app-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    padding: 4vh 4vw;
+    background-color: #000000;
+  }
+
+  /* Exklusiver goldener Fokus-Rahmen nur für das aktuell aktive Element */
+  button {
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+    cursor: pointer;
+    font-family: inherit;
+    color: #ffffff;
+    transition: transform 0.12s ease, background-color 0.12s ease;
+  }
+
+  button.is-focused {
+    border: 3px solid #ffd700 !important;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6) !important;
+    z-index: 20;
+  }
+
+  /* Oben links: Großes 2:3 Filmposter */
+  .hero-poster-btn {
+    position: absolute;
+    top: 4vh;
+    left: 4vw;
+    width: 40vh;
+    height: 60vh;
+    background-color: #111111;
+    border: none;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 0.8vh;
+  }
+
+  .hero-poster-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border: none;
+  }
+
+  .hero-fade-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(to right, rgba(0, 0, 0, 0) 62%, rgba(0, 0, 0, 0.85) 88%, #000000 100%),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0) 62%, rgba(0, 0, 0, 0.85) 88%, #000000 100%);
+  }
+
+  .hero-play-badge {
+    position: absolute;
+    bottom: 2.2vh;
+    left: 2.2vh;
+    width: 5.5vh;
+    height: 5.5vh;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.68);
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .hero-play-triangle {
+    width: 0;
+    height: 0;
+    margin-left: 0.4vh;
+    border-top: 1.1vh solid transparent;
+    border-bottom: 1.1vh solid transparent;
+    border-left: 1.8vh solid #ffffff;
+  }
+
+  .hero-title-tag {
+    position: absolute;
+    bottom: 2.6vh;
+    left: 9vh;
+    right: 3vh;
+    text-align: left;
+    font-size: 2.3vh;
+    font-weight: bold;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
+  }
+
+  /* Oben rechts: Suchleiste & TV-Tastatur */
+  .search-panel {
+    position: absolute;
+    top: 4vh;
+    right: calc(6.5vw + 100px);
+    width: 51vw;
+    height: calc(60vh - 75px);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .search-bar {
+    width: 100%;
+    height: 6.2vh;
+    background-color: #141414;
+    border: 2px solid #333333;
+    border-radius: 0.8vh;
+    padding: 0 1.6vw;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 2.5vh;
+  }
+
+  .search-text {
+    color: #ffffff;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .search-placeholder {
+    color: #777777;
+  }
+
+  .search-cursor {
+    display: inline-block;
+    width: 0.25vh;
+    height: 2.8vh;
+    background-color: #ffd700;
+    margin-left: 0.4vw;
+    vertical-align: middle;
+  }
+
+  .keyboard-grid {
+    flex: 1;
+    margin-top: 1.2vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 0.75vh;
+  }
+
+  .kb-row {
+    display: flex;
+    width: 100%;
+    flex: 1;
+    gap: 0.5vw;
+  }
+
+  .kb-btn {
+    flex: 1;
+    height: 100%;
+    background-color: #1a1a1a;
+    border: 3px solid transparent;
+    border-radius: 0.6vh;
+    font-size: 2.1vh;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .kb-btn.is-focused {
+    background-color: #2b2612;
+  }
+
+  .kb-action-btn {
+    font-size: 1.85vh;
+    background-color: #222222;
+  }
+
+  /* Unten: Alternativen-Bereich */
+  .bottom-section {
+    position: absolute;
+    left: 4vw;
+    right: 4vw;
+    bottom: 4vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .alternatives-heading {
+    font-size: 2.4vh;
+    font-weight: bold;
+    letter-spacing: 0.06em;
+    color: #e5e5e5;
+    margin-bottom: 1.4vh;
+    text-align: center;
+  }
+
+  .alternatives-row {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .alt-card {
+    position: relative;
+    height: 31vh;
+    width: 20.6vh;
+    background-color: #161616;
+    border: 3px solid transparent;
+    border-radius: 0.8vh;
+    overflow: hidden;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+
+  .alt-card-bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.88;
+  }
+
+  .alt-card-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.2) 55%, rgba(0, 0, 0, 0) 100%);
+  }
+
+  .alt-card-title {
+    position: relative;
+    z-index: 2;
+    padding: 1.2vh 1vh;
+    font-size: 1.85vh;
+    font-weight: bold;
+    color: #ffffff;
+    text-align: center;
+    line-height: 1.2;
+  }
+</style>
+</head>
+<body>
+<div class="app-container">
+
+  <!-- Großes 2:3 Filmposter oben links mit Vorschaubild Asiabild.jpeg -->
+  <button type="button" id="hero-poster-btn" class="hero-poster-btn" data-nav="hero">
+    <img id="hero-poster-img" src="Asiabild.jpeg" alt="Vorschau">
+    <div class="hero-fade-overlay"></div>
+    <div class="hero-play-badge">
+      <div class="hero-play-triangle"></div>
+    </div>
+    <div id="hero-title-tag" class="hero-title-tag">Shadow of Kyoto</div>
+  </button>
+
+  <!-- Suchleiste & TV-Tastatur oben rechts -->
+  <div class="search-panel">
+    <div class="search-bar">
+      <div id="search-display" class="search-text"><span class="search-placeholder">Filmtitel eingeben...</span><span class="search-cursor"></span></div>
+    </div>
+
+    <div class="keyboard-grid" id="keyboard-grid">
+      <div class="kb-row" data-row="0">
+        <button type="button" class="kb-btn" data-key="1">1</button>
+        <button type="button" class="kb-btn" data-key="2">2</button>
+        <button type="button" class="kb-btn" data-key="3">3</button>
+        <button type="button" class="kb-btn" data-key="4">4</button>
+        <button type="button" class="kb-btn" data-key="5">5</button>
+        <button type="button" class="kb-btn" data-key="6">6</button>
+        <button type="button" class="kb-btn" data-key="7">7</button>
+        <button type="button" class="kb-btn" data-key="8">8</button>
+        <button type="button" class="kb-btn" data-key="9">9</button>
+        <button type="button" class="kb-btn" data-key="0">0</button>
+      </div>
+      <div class="kb-row" data-row="1">
+        <button type="button" class="kb-btn" data-key="A">A</button>
+        <button type="button" class="kb-btn" data-key="B">B</button>
+        <button type="button" class="kb-btn" data-key="C">C</button>
+        <button type="button" class="kb-btn" data-key="D">D</button>
+        <button type="button" class="kb-btn" data-key="E">E</button>
+        <button type="button" class="kb-btn" data-key="F">F</button>
+        <button type="button" class="kb-btn" data-key="G">G</button>
+        <button type="button" class="kb-btn" data-key="H">H</button>
+        <button type="button" class="kb-btn" data-key="I">I</button>
+        <button type="button" class="kb-btn" data-key="J">J</button>
+      </div>
+      <div class="kb-row" data-row="2">
+        <button type="button" class="kb-btn" data-key="K">K</button>
+        <button type="button" class="kb-btn" data-key="L">L</button>
+        <button type="button" class="kb-btn" data-key="M">M</button>
+        <button type="button" class="kb-btn" data-key="N">N</button>
+        <button type="button" class="kb-btn" data-key="O">O</button>
+        <button type="button" class="kb-btn" data-key="P">P</button>
+        <button type="button" class="kb-btn" data-key="Q">Q</button>
+        <button type="button" class="kb-btn" data-key="R">R</button>
+        <button type="button" class="kb-btn" data-key="S">S</button>
+        <button type="button" class="kb-btn" data-key="T">T</button>
+      </div>
+      <div class="kb-row" data-row="3">
+        <button type="button" class="kb-btn" data-key="U">U</button>
+        <button type="button" class="kb-btn" data-key="V">V</button>
+        <button type="button" class="kb-btn" data-key="W">W</button>
+        <button type="button" class="kb-btn" data-key="X">X</button>
+        <button type="button" class="kb-btn" data-key="Y">Y</button>
+        <button type="button" class="kb-btn" data-key="Z">Z</button>
+        <button type="button" class="kb-btn" data-key="Ä">Ä</button>
+        <button type="button" class="kb-btn" data-key="Ö">Ö</button>
+        <button type="button" class="kb-btn" data-key="Ü">Ü</button>
+        <button type="button" class="kb-btn" data-key="-">-</button>
+      </div>
+      <div class="kb-row" data-row="4">
+        <button type="button" class="kb-btn kb-action-btn" data-action="clear">komplett Löschen</button>
+        <button type="button" class="kb-btn kb-action-btn" data-action="backspace">Löschen</button>
+        <button type="button" class="kb-btn kb-action-btn" data-action="space">Leertaste</button>
+        <button type="button" class="kb-btn kb-action-btn" data-action="enter">Ok - Enter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unten: 7 Alternativen-Kacheln -->
+  <div class="bottom-section">
+    <div class="alternatives-heading">Alternativen</div>
+    <div class="alternatives-row" id="alternatives-row">
+      <button type="button" class="alt-card" data-alt-index="0" data-movie-id="nacht-ueber-berlin">
+        <div class="alt-card-bg" style="background-image: url('Filme.jpeg');"></div>
+        <div class="alt-card-gradient"></div>
+        <div class="alt-card-title">Nacht über Berlin</div>
+      </button>
+      <button type="button" class="alt-card" data-alt-index="1" data-movie-id="sternenwanderer">
+        <div class="alt-card-bg" style="background-image: url('Serien.jpeg');"></div>
+        <div class="alt-card-gradient"></div>
+        <div class="alt-card-title">Sternenwanderer</div>
+      </button>
+      <button type="button" class="alt-card" data-alt-index="2" data-movie-id="der-letzte-horizont">
+        <div class="alt-card-bg" style="background-image: url('Genres.jpeg');"></div>
+        <div class="alt-card-gradient"></div>
+        <div class="alt-card-title">Der letzte Horizont</div>
+      </button>
+      <button type="button" class="alt-card" data-alt-index="3" data-movie-id="klang-der-tiefe">
+        <div class="alt-card-bg" style="background-image: url('Eigene Produktionen.jpeg');"></div>
+        <div class="alt-card-gradient"></div>
+        <div class="alt-card-title">Klang der Tiefe</div>
+      </button>
+      <button type="button" class="alt-card" data-alt-index="4" data-movie-id="chroniken-des-nordens">
+        <div class="alt-card-bg" style="background-image: url('Über Foxifilm.jpeg');"></div>
+        <div class="alt-card-gradient"></div>
+        <div class="alt-card-title">Chroniken des Nordens</div>
+      </button>
+      <button type="button" class="alt-card" data-alt-index="5" data-movie-id="eisige-spuren">
+        <div class="alt-card-bg" style="background-image: url('Suchen.jpeg');"></div>
+        <div class="alt-card-gradient"></div>
+        <div class="alt-card-title">Eisige Spuren</div>
+      </button>
+      <button type="button" class="alt-card" data-alt-index="6" data-movie-id="goldener-schatten">
+        <div class="alt-card-bg" style="background-image: url('Filme.jpeg');"></div>
+        <div class="alt-card-gradient"></div>
+        <div class="alt-card-title">Goldener Schatten</div>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var searchQuery = '';
+  var currentMovieId = 'shadow-of-kyoto';
+
+  var catalog = [
+    { id: 'shadow-of-kyoto', title: 'Shadow of Kyoto', img: 'Asiabild.jpeg' },
+    { id: 'nacht-ueber-berlin', title: 'Nacht über Berlin', img: 'Filme.jpeg' },
+    { id: 'sternenwanderer', title: 'Sternenwanderer', img: 'Serien.jpeg' },
+    { id: 'der-letzte-horizont', title: 'Der letzte Horizont', img: 'Genres.jpeg' },
+    { id: 'klang-der-tiefe', title: 'Klang der Tiefe', img: 'Eigene Produktionen.jpeg' },
+    { id: 'chroniken-des-nordens', title: 'Chroniken des Nordens', img: 'Über Foxifilm.jpeg' },
+    { id: 'eisige-spuren', title: 'Eisige Spuren', img: 'Suchen.jpeg' },
+    { id: 'goldener-schatten', title: 'Goldener Schatten', img: 'Filme.jpeg' }
+  ];
+
+  var heroBtn = document.getElementById('hero-poster-btn');
+  var heroImg = document.getElementById('hero-poster-img');
+  var heroTitle = document.getElementById('hero-title-tag');
+  var searchDisplay = document.getElementById('search-display');
+  var kbRowEls = document.querySelectorAll('.kb-row');
+  var altCards = document.querySelectorAll('.alt-card');
+  var allButtons = document.querySelectorAll('button');
+
+  var kbRows = [];
+  var i, j;
+  for (i = 0; i < kbRowEls.length; i++) {
+    kbRows.push(kbRowEls[i].querySelectorAll('.kb-btn'));
+  }
+
+  var navState = {
+    zone: 'kb',
+    row: 1,
+    col: 0,
+    altIdx: 0
+  };
+
+  function clearAllFocus() {
+    for (i = 0; i < allButtons.length; i++) {
+      allButtons[i].classList.remove('is-focused');
+    }
+  }
+
+  function setFocusElement(el) {
+    clearAllFocus();
+    if (el) {
+      el.classList.add('is-focused');
+      el.focus();
+    }
+  }
+
+  function applyNavFocus() {
+    if (navState.zone === 'hero') {
+      setFocusElement(heroBtn);
+    } else if (navState.zone === 'kb') {
+      var rowArr = kbRows[navState.row];
+      if (navState.col >= rowArr.length) {
+        navState.col = rowArr.length - 1;
+      }
+      if (navState.col < 0) {
+        navState.col = 0;
+      }
+      setFocusElement(rowArr[navState.col]);
+    } else if (navState.zone === 'alt') {
+      if (navState.altIdx >= altCards.length) {
+        navState.altIdx = altCards.length - 1;
+      }
+      if (navState.altIdx < 0) {
+        navState.altIdx = 0;
+      }
+      setFocusElement(altCards[navState.altIdx]);
+    }
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  function updateSearchUI() {
+    if (searchQuery.length === 0) {
+      searchDisplay.innerHTML = '<span class="search-placeholder">Filmtitel eingeben...</span><span class="search-cursor"></span>';
+    } else {
+      searchDisplay.innerHTML = escapeHtml(searchQuery) + '<span class="search-cursor"></span>';
+    }
+
+    var q = searchQuery.toLowerCase();
+    var matched = catalog[0];
+    if (q.length > 0) {
+      for (i = 0; i < catalog.length; i++) {
+        if (catalog[i].title.toLowerCase().indexOf(q) !== -1) {
+          matched = catalog[i];
+          break;
+        }
+      }
+    }
+    currentMovieId = matched.id;
+    heroTitle.textContent = matched.title;
+    heroImg.src = matched.img;
+  }
+
+  function playHeroMovie() {
+    window.location.href = 'player.html?id=' + encodeURIComponent(currentMovieId);
+  }
+
+  function openAlternativeDetail(altIdx) {
+    var card = altCards[altIdx];
+    if (!card) {
+      return;
+    }
+    var movieId = card.getAttribute('data-movie-id');
+    if (!movieId && catalog[altIdx + 1]) {
+      movieId = catalog[altIdx + 1].id;
+    }
+    if (movieId) {
+      window.location.href = 'detail.html?id=' + encodeURIComponent(movieId);
+    }
+  }
+
+  function handleKeyboardButton(btn) {
+    var key = btn.getAttribute('data-key');
+    var action = btn.getAttribute('data-action');
+    if (key) {
+      if (searchQuery.length < 32) {
+        searchQuery += key;
+        updateSearchUI();
+      }
+    } else if (action === 'clear') {
+      searchQuery = '';
+      updateSearchUI();
+    } else if (action === 'backspace') {
+      if (searchQuery.length > 0) {
+        searchQuery = searchQuery.slice(0, -1);
+        updateSearchUI();
+      }
+    } else if (action === 'space') {
+      if (searchQuery.length > 0 && searchQuery.length < 32) {
+        searchQuery += ' ';
+        updateSearchUI();
+      }
+    } else if (action === 'enter') {
+      navState.zone = 'hero';
+      applyNavFocus();
+    }
+  }
+
+  // Maus-Events und Klick-Handler
+  heroBtn.addEventListener('mouseenter', function() {
+    navState.zone = 'hero';
+    applyNavFocus();
+  });
+  heroBtn.addEventListener('mouseleave', function() {
+    clearAllFocus();
+  });
+  heroBtn.addEventListener('click', function() {
+    playHeroMovie();
+  });
+
+  for (i = 0; i < kbRows.length; i++) {
+    (function(rIdx) {
+      for (j = 0; j < kbRows[rIdx].length; j++) {
+        (function(cIdx, btn) {
+          btn.addEventListener('mouseenter', function() {
+            navState.zone = 'kb';
+            navState.row = rIdx;
+            navState.col = cIdx;
+            applyNavFocus();
+          });
+          btn.addEventListener('mouseleave', function() {
+            clearAllFocus();
+          });
+          btn.addEventListener('click', function() {
+            navState.zone = 'kb';
+            navState.row = rIdx;
+            navState.col = cIdx;
+            applyNavFocus();
+            handleKeyboardButton(btn);
+          });
+        })(j, kbRows[rIdx][j]);
+      }
+    })(i);
+  }
+
+  for (i = 0; i < altCards.length; i++) {
+    (function(aIdx, card) {
+      card.addEventListener('mouseenter', function() {
+        navState.zone = 'alt';
+        navState.altIdx = aIdx;
+        applyNavFocus();
+      });
+      card.addEventListener('mouseleave', function() {
+        clearAllFocus();
+      });
+      card.addEventListener('click', function() {
+        navState.zone = 'alt';
+        navState.altIdx = aIdx;
+        applyNavFocus();
+        openAlternativeDetail(aIdx);
+      });
+    })(i, altCards[i]);
+  }
+
+  for (i = 0; i < allButtons.length; i++) {
+    allButtons[i].addEventListener('blur', function() {
+      this.classList.remove('is-focused');
+    });
+  }
+
+  // Fernbedienungs-Steuerung
+  document.addEventListener('keydown', function(e) {
+    var code = e.keyCode || e.which;
+
+    // Zurück-Taste (Fire TV, Samsung, LG, Browser)
+    if (code === 4 || code === 8 || code === 27 || code === 461 || code === 10009) {
+      e.preventDefault();
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // Links (37)
+    if (code === 37) {
+      e.preventDefault();
+      if (navState.zone === 'kb') {
+        if (navState.col > 0) {
+          navState.col--;
+        } else {
+          navState.zone = 'hero';
+        }
+      } else if (navState.zone === 'alt') {
+        if (navState.altIdx > 0) {
+          navState.altIdx--;
+        }
+      }
+      applyNavFocus();
+      return;
+    }
+
+    // Rechts (39)
+    if (code === 39) {
+      e.preventDefault();
+      if (navState.zone === 'hero') {
+        navState.zone = 'kb';
+        navState.col = 0;
+      } else if (navState.zone === 'kb') {
+        if (navState.col < kbRows[navState.row].length - 1) {
+          navState.col++;
+        }
+      } else if (navState.zone === 'alt') {
+        if (navState.altIdx < altCards.length - 1) {
+          navState.altIdx++;
+        }
+      }
+      applyNavFocus();
+      return;
+    }
+
+    // Hoch (38)
+    if (code === 38) {
+      e.preventDefault();
+      if (navState.zone === 'kb') {
+        if (navState.row > 0) {
+          var prevLen = kbRows[navState.row].length;
+          navState.row--;
+          var nextLen = kbRows[navState.row].length;
+          navState.col = Math.round((navState.col / Math.max(1, prevLen - 1)) * (nextLen - 1));
+        }
+      } else if (navState.zone === 'alt') {
+        if (navState.altIdx <= 2) {
+          navState.zone = 'hero';
+        } else {
+          navState.zone = 'kb';
+          navState.row = kbRows.length - 1;
+          navState.col = Math.min(kbRows[navState.row].length - 1, navState.altIdx - 3);
+        }
+      }
+      applyNavFocus();
+      return;
+    }
+
+    // Runter (40)
+    if (code === 40) {
+      e.preventDefault();
+      if (navState.zone === 'hero') {
+        navState.zone = 'alt';
+        navState.altIdx = 0;
+      } else if (navState.zone === 'kb') {
+        if (navState.row < kbRows.length - 1) {
+          var curLen = kbRows[navState.row].length;
+          navState.row++;
+          var downLen = kbRows[navState.row].length;
+          navState.col = Math.round((navState.col / Math.max(1, curLen - 1)) * (downLen - 1));
+        } else {
+          navState.zone = 'alt';
+          navState.altIdx = Math.min(altCards.length - 1, navState.col + 3);
+        }
+      }
+      applyNavFocus();
+      return;
+    }
+
+    // OK / Enter (13)
+    if (code === 13) {
+      e.preventDefault();
+      if (navState.zone === 'hero') {
+        playHeroMovie();
+      } else if (navState.zone === 'kb') {
+        handleKeyboardButton(kbRows[navState.row][navState.col]);
+      } else if (navState.zone === 'alt') {
+        openAlternativeDetail(navState.altIdx);
+      }
+    }
+  });
+
+  // Startfokus
+  window.addEventListener('load', function() {
+    applyNavFocus();
+  });
+})();
+</script>
+</body>
+</html>

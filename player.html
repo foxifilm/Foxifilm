@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920, height=1080, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Foxifilm - Video Player</title>
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    background-color: #000000;
+    overflow: hidden;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #ffffff;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #stage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1920px;
+    height: 1080px;
+    margin-left: -960px;
+    margin-top: -540px;
+    background-color: #000000;
+    overflow: hidden;
+    transform-origin: center center;
+    -webkit-transform-origin: center center;
+  }
+
+  #video-element {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1920px;
+    height: 1080px;
+    background-color: #000000;
+    object-fit: contain;
+    z-index: 1;
+  }
+
+  #preview-badge {
+    display: none;
+    position: absolute;
+    top: 44px;
+    left: 56px;
+    z-index: 30;
+    background-color: rgba(0, 0, 0, 0.78);
+    border: 3px solid #ffd700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.55);
+    color: #ffd700;
+    font-size: 24px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    padding: 12px 24px;
+    border-radius: 8px;
+  }
+
+  #brand-logo {
+    position: absolute;
+    top: 38px;
+    right: 56px;
+    height: 110px;
+    width: auto;
+    display: block;
+    z-index: 30;
+    pointer-events: none;
+  }
+
+  #controls-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1920px;
+    height: 1080px;
+    z-index: 20;
+    opacity: 1;
+    transition: opacity 0.25s ease;
+    -webkit-transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+
+  #controls-overlay.hidden {
+    opacity: 0;
+  }
+
+  #top-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1920px;
+    height: 180px;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0) 100%);
+  }
+
+  #center-status {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 140px;
+    height: 140px;
+    margin-left: -70px;
+    margin-top: -70px;
+    border-radius: 70px;
+    background-color: rgba(0, 0, 0, 0.72);
+    border: 3px solid #ffd700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+    text-align: center;
+    line-height: 134px;
+    font-size: 46px;
+    color: #ffd700;
+    display: none;
+  }
+
+  #bottom-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 1920px;
+    height: 230px;
+    padding: 50px 64px 48px 64px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.65) 55%, rgba(0, 0, 0, 0) 100%);
+  }
+
+  #title-row {
+    width: 100%;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  #movie-title {
+    float: left;
+    font-size: 40px;
+    font-weight: bold;
+    color: #ffffff;
+    max-width: 1420px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #time-display {
+    float: right;
+    font-size: 32px;
+    font-weight: bold;
+    color: #ffd700;
+    line-height: 46px;
+  }
+
+  #progress-track {
+    clear: both;
+    position: relative;
+    width: 100%;
+    height: 14px;
+    background-color: rgba(255, 255, 255, 0.25);
+    border-radius: 7px;
+    overflow: hidden;
+  }
+
+  #progress-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0%;
+    height: 14px;
+    background-color: #ffd700;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
+    border-radius: 7px;
+  }
+
+  #hint-row {
+    margin-top: 16px;
+    font-size: 22px;
+    color: #cccccc;
+  }
+
+  #status-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 1100px;
+    margin-left: -550px;
+    margin-top: -60px;
+    padding: 28px 36px;
+    background-color: rgba(0, 0, 0, 0.88);
+    border: 3px solid #ffd700;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 32px;
+    color: #ffffff;
+    z-index: 25;
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <video id="video-element" preload="auto" playsinline webkit-playsinline></video>
+
+    <div id="preview-badge">VORSCHAU-MODUS (MAX. 2:00 MIN)</div>
+
+    <img id="brand-logo" src="Foxilogo.png.png" alt="Foxifilm">
+
+    <div id="status-message"></div>
+
+    <div id="controls-overlay">
+      <div id="top-bar"></div>
+
+      <div id="center-status">❚❚</div>
+
+      <div id="bottom-bar">
+        <div id="title-row">
+          <div id="movie-title">Foxifilm</div>
+          <div id="time-display">00:00 / 00:00</div>
+        </div>
+        <div id="progress-track">
+          <div id="progress-fill"></div>
+        </div>
+        <div id="hint-row">OK / Enter: Play &amp; Pause &nbsp;&bull;&nbsp; Links / Rechts: &plusmn;15 Sek. &nbsp;&bull;&nbsp; Hoch / Runter: Leiste &nbsp;&bull;&nbsp; Zur&uuml;ck: Beenden</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var PREVIEW_LIMIT_SECONDS = 120;
+  var SEEK_STEP_SECONDS = 15;
+  var HIDE_DELAY_MS = 4000;
+
+  var stageEl = document.getElementById('stage');
+  var videoEl = document.getElementById('video-element');
+  var previewBadgeEl = document.getElementById('preview-badge');
+  var controlsEl = document.getElementById('controls-overlay');
+  var centerStatusEl = document.getElementById('center-status');
+  var titleEl = document.getElementById('movie-title');
+  var timeDisplayEl = document.getElementById('time-display');
+  var progressFillEl = document.getElementById('progress-fill');
+  var statusMessageEl = document.getElementById('status-message');
+
+  var hideTimer = null;
+  var isExiting = false;
+  var isPreviewMode = false;
+  var videoSrc = '';
+  var movieTitle = 'Foxifilm';
+
+  function scaleStage() {
+    var winW = window.innerWidth || document.documentElement.clientWidth || 1920;
+    var winH = window.innerHeight || document.documentElement.clientHeight || 1080;
+    var scaleX = winW / 1920;
+    var scaleY = winH / 1080;
+    var scale = scaleX < scaleY ? scaleX : scaleY;
+    var transformVal = 'scale(' + scale + ')';
+    stageEl.style.webkitTransform = transformVal;
+    stageEl.style.msTransform = transformVal;
+    stageEl.style.transform = transformVal;
+  }
+
+  function getQueryParam(name) {
+    var search = window.location.search;
+    if (!search || search.length < 2) {
+      return '';
+    }
+    var query = search.substring(1);
+    var pairs = query.split('&');
+    var i;
+    for (i = 0; i < pairs.length; i++) {
+      var parts = pairs[i].split('=');
+      var key = decodeURIComponent(parts[0] || '');
+      if (key === name) {
+        var rawVal = parts.slice(1).join('=');
+        return decodeURIComponent(rawVal.replace(/\+/g, ' '));
+      }
+    }
+    return '';
+  }
+
+  function padZero(num) {
+    var n = Math.floor(num);
+    if (isNaN(n) || n < 0) {
+      n = 0;
+    }
+    return n < 10 ? '0' + n : '' + n;
+  }
+
+  function formatTime(seconds) {
+    if (isNaN(seconds) || !isFinite(seconds) || seconds < 0) {
+      return '00:00';
+    }
+    var totalSec = Math.floor(seconds);
+    var hours = Math.floor(totalSec / 3600);
+    var mins = Math.floor((totalSec % 3600) / 60);
+    var secs = totalSec % 60;
+    if (hours > 0) {
+      return padZero(hours) + ':' + padZero(mins) + ':' + padZero(secs);
+    }
+    return padZero(mins) + ':' + padZero(secs);
+  }
+
+  function getEffectiveDuration() {
+    var dur = videoEl.duration;
+    if (isNaN(dur) || !isFinite(dur) || dur <= 0) {
+      return isPreviewMode ? PREVIEW_LIMIT_SECONDS : 0;
+    }
+    if (isPreviewMode && dur > PREVIEW_LIMIT_SECONDS) {
+      return PREVIEW_LIMIT_SECONDS;
+    }
+    return dur;
+  }
+
+  function updateProgressUI() {
+    var current = videoEl.currentTime || 0;
+    var effectiveDur = getEffectiveDuration();
+    if (isPreviewMode && current > PREVIEW_LIMIT_SECONDS) {
+      current = PREVIEW_LIMIT_SECONDS;
+    }
+    timeDisplayEl.innerHTML = formatTime(current) + ' / ' + formatTime(effectiveDur);
+
+    var percent = 0;
+    if (effectiveDur > 0) {
+      percent = (current / effectiveDur) * 100;
+      if (percent < 0) {
+        percent = 0;
+      }
+      if (percent > 100) {
+        percent = 100;
+      }
+    }
+    progressFillEl.style.width = percent + '%';
+  }
+
+  function showControls(autoHide) {
+    controlsEl.className = '';
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    }
+    if (autoHide && !videoEl.paused) {
+      hideTimer = setTimeout(function () {
+        if (!videoEl.paused) {
+          controlsEl.className = 'hidden';
+        }
+      }, HIDE_DELAY_MS);
+    }
+  }
+
+  function hideControls() {
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    }
+    controlsEl.className = 'hidden';
+  }
+
+  function toggleControls() {
+    if (controlsEl.className === 'hidden') {
+      showControls(true);
+    } else {
+      hideControls();
+    }
+  }
+
+  function updatePlayPauseIndicator() {
+    if (videoEl.paused) {
+      centerStatusEl.innerHTML = '❚❚';
+      centerStatusEl.style.display = 'block';
+      showControls(false);
+    } else {
+      centerStatusEl.style.display = 'none';
+      showControls(true);
+    }
+  }
+
+  function stopAndReturn() {
+    if (isExiting) {
+      return;
+    }
+    isExiting = true;
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    }
+    try {
+      videoEl.pause();
+      videoEl.removeAttribute('src');
+      videoEl.load();
+    } catch (e) {}
+    window.history.back();
+  }
+
+  function togglePlayPause() {
+    if (!videoSrc) {
+      showControls(false);
+      return;
+    }
+    if (videoEl.paused) {
+      var playPromise = videoEl.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(function () {});
+      }
+      updatePlayPauseIndicator();
+    } else {
+      videoEl.pause();
+      updatePlayPauseIndicator();
+    }
+  }
+
+  function seekBy(deltaSeconds) {
+    if (!videoSrc) {
+      return;
+    }
+    var current = videoEl.currentTime || 0;
+    var target = current + deltaSeconds;
+    var maxLimit = getEffectiveDuration();
+
+    if (target < 0) {
+      target = 0;
+    }
+    if (isPreviewMode && target >= PREVIEW_LIMIT_SECONDS) {
+      stopAndReturn();
+      return;
+    }
+    if (maxLimit > 0 && target > maxLimit) {
+      target = maxLimit;
+    }
+
+    try {
+      videoEl.currentTime = target;
+    } catch (e) {}
+    updateProgressUI();
+    showControls(true);
+  }
+
+  function showStatusMessage(text) {
+    statusMessageEl.innerHTML = text;
+    statusMessageEl.style.display = 'block';
+  }
+
+  function initPlayer() {
+    var paramTitle = getQueryParam('title');
+    var paramSrc = getQueryParam('src');
+    var paramMode = getQueryParam('mode');
+
+    if (paramTitle) {
+      movieTitle = paramTitle;
+    }
+    titleEl.innerHTML = movieTitle;
+    document.title = 'Foxifilm - ' + movieTitle;
+
+    if (paramMode && paramMode.toLowerCase() === 'preview') {
+      isPreviewMode = true;
+      previewBadgeEl.style.display = 'block';
+    } else {
+      isPreviewMode = false;
+      previewBadgeEl.style.display = 'none';
+    }
+
+    videoSrc = paramSrc;
+
+    if (!videoSrc) {
+      showStatusMessage('Kein Videopfad (src) &uuml;bergeben.<br><span style="font-size:24px;color:#ffd700;">Dr&uuml;cken Sie Zur&uuml;ck, um zur Detailseite zur&uuml;ckzukehren.</span>');
+      showControls(false);
+      return;
+    }
+
+    videoEl.src = videoSrc;
+    videoEl.load();
+
+    var startPromise = videoEl.play();
+    if (startPromise && typeof startPromise.catch === 'function') {
+      startPromise.catch(function () {
+        updatePlayPauseIndicator();
+      });
+    }
+    showControls(true);
+  }
+
+  videoEl.addEventListener('loadedmetadata', function () {
+    updateProgressUI();
+  }, false);
+
+  videoEl.addEventListener('timeupdate', function () {
+    if (isPreviewMode && videoEl.currentTime >= PREVIEW_LIMIT_SECONDS) {
+      stopAndReturn();
+      return;
+    }
+    updateProgressUI();
+  }, false);
+
+  videoEl.addEventListener('play', function () {
+    statusMessageEl.style.display = 'none';
+    updatePlayPauseIndicator();
+  }, false);
+
+  videoEl.addEventListener('pause', function () {
+    if (!isExiting) {
+      updatePlayPauseIndicator();
+    }
+  }, false);
+
+  videoEl.addEventListener('ended', function () {
+    stopAndReturn();
+  }, false);
+
+  videoEl.addEventListener('error', function () {
+    if (!isExiting && videoSrc) {
+      showStatusMessage('Das Video konnte nicht geladen werden.<br><span style="font-size:24px;color:#ffd700;">Dr&uuml;cken Sie Zur&uuml;ck, um zur Detailseite zur&uuml;ckzukehren.</span>');
+      showControls(false);
+    }
+  }, false);
+
+  function handleKeyDown(evt) {
+    var e = evt || window.event;
+    var code = e.keyCode || e.which;
+    var key = e.key || '';
+
+    // Zurück-Taste (Backspace 8, Escape 27, Fire TV / Android 4, LG 461, Samsung 10009)
+    if (code === 8 || code === 27 || code === 4 || code === 461 || code === 10009 ||
+        key === 'Backspace' || key === 'Escape' || key === 'GoBack' || key === 'BrowserBack') {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      stopAndReturn();
+      return false;
+    }
+
+    // Enter / OK (13) oder Media Play/Pause (179, 415, 19)
+    if (code === 13 || code === 179 || code === 415 || code === 19 ||
+        key === 'Enter' || key === 'MediaPlayPause') {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      togglePlayPause();
+      return false;
+    }
+
+    // Pfeil Links (37) oder Rewind (412) -> 15 Sek. zurück
+    if (code === 37 || code === 412 || key === 'ArrowLeft' || key === 'MediaRewind') {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      seekBy(-SEEK_STEP_SECONDS);
+      return false;
+    }
+
+    // Pfeil Rechts (39) oder FastForward (417) -> 15 Sek. vor
+    if (code === 39 || code === 417 || key === 'ArrowRight' || key === 'MediaFastForward') {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      seekBy(SEEK_STEP_SECONDS);
+      return false;
+    }
+
+    // Pfeil Hoch (38) oder Pfeil Runter (40) -> Steuerungsleiste ein-/ausblenden
+    if (code === 38 || code === 40 || key === 'ArrowUp' || key === 'ArrowDown') {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      toggleControls();
+      return false;
+    }
+  }
+
+  window.addEventListener('resize', scaleStage, false);
+  window.addEventListener('keydown', handleKeyDown, false);
+  document.onkeydown = handleKeyDown;
+
+  document.onclick = function () {
+    window.focus();
+    togglePlayPause();
+  };
+
+  scaleStage();
+  window.focus();
+  initPlayer();
+})();
+</script>
+</body>
+</html>
