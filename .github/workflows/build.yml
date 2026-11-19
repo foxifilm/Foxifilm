@@ -1,86 +1,44 @@
 name: Build Foxifilm APK
-on: [workflow_dispatch]
+
+on:
+  workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Build APK
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle 8.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.2'
+
+      - name: Copy App Icon
         run: |
-          set +o pipefail
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-22" "build-tools;34.0.0" > /dev/null
-          mkdir -p src/de/foxifilm/app res/drawable build/gen build/obj build/apk
-          [ -f "Foxilogo.png.png" ] && cp Foxilogo.png.png res/drawable/ic.png || printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82' > res/drawable/ic.png
-          
-          python3 -c '
-          import xml.etree.ElementTree as ET
-          NS = "http://android.com"
-          ET.register_namespace("android", NS)
-          m = ET.Element("manifest", {"package": "de.foxifilm.app", f"{{{NS}}}versionCode": "1", f"{{{NS}}}versionName": "1.0"})
-          ET.SubElement(m, "uses-sdk", {f"{{{NS}}}minSdkVersion": "21", f"{{{NS}}}targetSdkVersion": "22"})
-          ET.SubElement(m, "uses-permission", {f"{{{NS}}}name": "android.permission.INTERNET"})
-          app = ET.SubElement(m, "application", {f"{{{NS}}}label": "Foxifilm", f"{{{NS}}}icon": "@drawable/ic", f"{{{NS}}}theme": "@android:style/Theme.NoTitleBar.Fullscreen", f"{{{NS}}}hardwareAccelerated": "true"})
-          act = ET.SubElement(app, "activity", {f"{{{NS}}}name": ".MainActivity", f"{{{NS}}}screenOrientation": "landscape", f"{{{NS}}}configChanges": "orientation|screenSize|keyboardHidden", f"{{{NS}}}exported": "true"})
-          inf = ET.SubElement(act, "intent-filter")
-          ET.SubElement(inf, "action", {f"{{{NS}}}name": "android.intent.action.MAIN"})
-          ET.SubElement(inf, "category", {f"{{{NS}}}name": "android.intent.category.LAUNCHER"})
-          ET.SubElement(inf, "category", {f"{{{NS}}}name": "android.intent.category.LEANBACK_LAUNCHER"})
-          ET.ElementTree(m).write("AndroidManifest.xml", encoding="utf-8", xml_declaration=True)
-          '
+          mkdir -p app/src/main/res/drawable
+          if [ -f "Foxilogo.png.png" ]; then
+            cp Foxilogo.png.png app/src/main/res/drawable/ic_launcher.png
+          fi
 
-          cat << 'EOF' > src/de/foxifilm/app/MainActivity.java
-          package de.foxifilm.app;
-          import android.app.Activity;
-          import android.os.Bundle;
-          import android.view.KeyEvent;
-          import android.view.View;
-          import android.webkit.WebSettings;
-          import android.webkit.WebView;
-          import android.webkit.WebViewClient;
-          public class MainActivity extends Activity {
-              private WebView w;
-              @Override
-              protected void onCreate(Bundle b) {
-                  super.onCreate(b);
-                  getWindow().getDecorView().setSystemUiVisibility(
-                      View.SYSTEM_UI_FLAG_FULLSCREEN |
-                      View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-                      View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                  );
-                  w = new WebView(this);
-                  WebSettings s = w.getSettings();
-                  s.setJavaScriptEnabled(true);
-                  s.setDomStorageEnabled(true);
-                  s.setMediaPlaybackRequiresUserGesture(false);
-                  w.setWebViewClient(new WebViewClient());
-                  setContentView(w);
-                  w.loadUrl("https://github.io");
-                  w.requestFocus();
-              }
-              @Override
-              public boolean onKeyDown(int k, KeyEvent e) {
-                  if (k == KeyEvent.KEYCODE_BACK && w.canGoBack()) {
-                      w.goBack();
-                      return true;
-                  }
-                  return super.onKeyDown(k, e);
-              }
-          }
-          EOF
+      - name: Generate Gradle Wrapper & Build Release APK
+        run: |
+          gradle wrapper --gradle-version 8.2
+          chmod +x gradlew
+          ./gradlew assembleRelease
 
-          $ANDROID_HOME/build-tools/34.0.0/aapt package -f -m -J build/gen -M AndroidManifest.xml -S res -I $ANDROID_HOME/platforms/android-22/android.jar
-          javac -source 1.8 -target 1.8 -d build/obj -classpath $ANDROID_HOME/platforms/android-22/android.jar build/gen/de/foxifilm/app/R.java src/de/foxifilm/app/MainActivity.java
-          $ANDROID_HOME/build-tools/34.0.0/d8 --min-api 21 --output build/apk build/obj/de/foxifilm/app/*.class
-          $ANDROID_HOME/build-tools/34.0.0/aapt package -f -M AndroidManifest.xml -S res -I $ANDROID_HOME/platforms/android-22/android.jar -F build/u.apk build/apk
-          $ANDROID_HOME/build-tools/34.0.0/zipalign -f 4 build/u.apk build/a.apk
-          keytool -genkeypair -v -keystore d.keystore -storepass android -alias key -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Foxifilm,O=Foxifilm,C=DE"
-          $ANDROID_HOME/build-tools/34.0.0/apksigner sign --ks d.keystore --ks-pass pass:android --key-pass pass:android --out Foxifilm-FireTV.apk build/a.apk
-      - uses: actions/upload-artifact@v5
+      - name: Upload Foxifilm APK
+        uses: actions/upload-artifact@v4
         with:
           name: Foxifilm-FireTV-APK
-          path: Foxifilm-FireTV.apk
+          path: app/build/outputs/apk/release/app-release.apk
