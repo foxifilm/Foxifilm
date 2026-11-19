@@ -16,8 +16,72 @@ jobs:
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-22" "build-tools;34.0.0" > /dev/null
           mkdir -p src/de/foxifilm/app res/drawable build/gen build/obj build/apk
           [ -f "Foxilogo.png.png" ] && cp Foxilogo.png.png res/drawable/ic.png || printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82' > res/drawable/ic.png
-          printf '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://android.com" package="de.foxifilm.app" android:versionCode="1" android:versionName="1.0"><uses-sdk android:minSdkVersion="21" android:targetSdkVersion="22"/><uses-permission android:name="android.permission.INTERNET"/><application android:label="Foxifilm" android:icon="@drawable/ic" android:theme="@android:style/Theme.NoTitleBar.Fullscreen" android:hardwareAccelerated="true"><activity android:name=".MainActivity" android:screenOrientation="landscape" android:configChanges="orientation|screenSize|keyboardHidden" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/><category android:name="android.intent.category.LEANBACK_LAUNCHER"/></intent-filter></activity></application></manifest>' > AndroidManifest.xml
-          printf 'package de.foxifilm.app; import android.app.Activity; import android.os.Bundle; import android.view.KeyEvent; import android.view.View; import android.webkit.WebSettings; import android.webkit.WebView; import android.webkit.WebViewClient; public class MainActivity extends Activity { private WebView w; @Override protected void onCreate(Bundle b) { super.onCreate(b); getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY); w=new WebView(this); WebSettings s=w.getSettings(); s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setMediaPlaybackRequiresUserGesture(false); w.setWebViewClient(new WebViewClient()); setContentView(w); w.loadUrl("https://github.io"); w.requestFocus(); } @Override public boolean onKeyDown(int k, KeyEvent e) { if(k==KeyEvent.KEYCODE_BACK && w.canGoBack()){w.goBack();return true;} return super.onKeyDown(k,e); } }' > src/de/foxifilm/app/MainActivity.java
+          cat << 'EOF' > AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://android.com"
+              package="de.foxifilm.app"
+              android:versionCode="1"
+              android:versionName="1.0">
+              <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="22" />
+              <uses-permission android:name="android.permission.INTERNET" />
+              <application
+                  android:label="Foxifilm"
+                  android:icon="@drawable/ic"
+                  android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+                  android:hardwareAccelerated="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:screenOrientation="landscape"
+                      android:configChanges="orientation|screenSize|keyboardHidden"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                          <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+          cat << 'EOF' > src/de/foxifilm/app/MainActivity.java
+          package de.foxifilm.app;
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.view.KeyEvent;
+          import android.view.View;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          public class MainActivity extends Activity {
+              private WebView w;
+              @Override
+              protected void onCreate(Bundle b) {
+                  super.onCreate(b);
+                  getWindow().getDecorView().setSystemUiVisibility(
+                      View.SYSTEM_UI_FLAG_FULLSCREEN |
+                      View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                      View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                  );
+                  w = new WebView(this);
+                  WebSettings s = w.getSettings();
+                  s.setJavaScriptEnabled(true);
+                  s.setDomStorageEnabled(true);
+                  s.setMediaPlaybackRequiresUserGesture(false);
+                  w.setWebViewClient(new WebViewClient());
+                  setContentView(w);
+                  w.loadUrl("https://github.io");
+                  w.requestFocus();
+              }
+              @Override
+              public boolean onKeyDown(int k, KeyEvent e) {
+                  if (k == KeyEvent.KEYCODE_BACK && w.canGoBack()) {
+                      w.goBack();
+                      return true;
+                  }
+                  return super.onKeyDown(k, e);
+              }
+          }
+          EOF
           $ANDROID_HOME/build-tools/34.0.0/aapt package -f -m -J build/gen -M AndroidManifest.xml -S res -I $ANDROID_HOME/platforms/android-22/android.jar
           javac -source 1.8 -target 1.8 -d build/obj -classpath $ANDROID_HOME/platforms/android-22/android.jar build/gen/de/foxifilm/app/R.java src/de/foxifilm/app/MainActivity.java
           $ANDROID_HOME/build-tools/34.0.0/d8 --min-api 21 --output build/apk build/obj/de/foxifilm/app/*.class
