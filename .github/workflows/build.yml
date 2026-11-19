@@ -21,6 +21,10 @@ jobs:
 
       - name: Build Fire OS 5 APK
         run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-22" "build-tools;34.0.0"
+          ANDROID_JAR="$ANDROID_HOME/platforms/android-22/android.jar"
+          BUILD_TOOLS="$ANDROID_HOME/build-tools/34.0.0"
+
           mkdir -p app/src/main/java/de/foxifilm/app
           mkdir -p app/src/main/res/mipmap-xxxhdpi
           cp Foxilogo.png.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || true
@@ -98,10 +102,6 @@ jobs:
               }
           }
           EOF
-
-          ANDROID_JAR="$ANDROID_HOME/platforms/android-22/android.jar"
-          BUILD_TOOLS="$ANDROID_HOME/build-tools/34.0.0"
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-22" "build-tools;34.0.0"
 
           mkdir -p build/gen build/obj build/apk
           $BUILD_TOOLS/aapt package -f -m -J build/gen -M app/src/main/AndroidManifest.xml -S app/src/main/res -I $ANDROID_JAR
