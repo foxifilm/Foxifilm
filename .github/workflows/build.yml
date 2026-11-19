@@ -21,14 +21,19 @@ jobs:
 
       - name: Build Fire OS 5 APK
         run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-22" "build-tools;34.0.0"
+          set +o pipefail
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "platforms;android-22" "build-tools;34.0.0" > /dev/null
+
           ANDROID_JAR="$ANDROID_HOME/platforms/android-22/android.jar"
           BUILD_TOOLS="$ANDROID_HOME/build-tools/34.0.0"
 
           mkdir -p app/src/main/java/de/foxifilm/app
           mkdir -p app/src/main/res/mipmap-xxxhdpi
-          cp Foxilogo.png.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png || true
-          
+          if [ -f "Foxilogo.png.png" ]; then
+            cp Foxilogo.png.png app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          fi
+
           cat << 'EOF' > app/src/main/AndroidManifest.xml
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://android.com"
@@ -41,7 +46,6 @@ jobs:
               <uses-feature android:name="android.software.leanback" android:required="false" />
               <application
                   android:label="Foxifilm"
-                  android:icon="@mipmap/ic_launcher"
                   android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
                   android:hardwareAccelerated="true">
                   <activity
