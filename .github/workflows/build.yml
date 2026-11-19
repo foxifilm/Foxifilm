@@ -16,33 +16,23 @@ jobs:
           $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-22" "build-tools;34.0.0" > /dev/null
           mkdir -p src/de/foxifilm/app res/drawable build/gen build/obj build/apk
           [ -f "Foxilogo.png.png" ] && cp Foxilogo.png.png res/drawable/ic.png || printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82' > res/drawable/ic.png
-          cat << 'EOF' > AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://android.com"
-              package="de.foxifilm.app"
-              android:versionCode="1"
-              android:versionName="1.0">
-              <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="22" />
-              <uses-permission android:name="android.permission.INTERNET" />
-              <application
-                  android:label="Foxifilm"
-                  android:icon="@drawable/ic"
-                  android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
-                  android:hardwareAccelerated="true">
-                  <activity
-                      android:name=".MainActivity"
-                      android:screenOrientation="landscape"
-                      android:configChanges="orientation|screenSize|keyboardHidden"
-                      android:exported="true">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                          <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
+          
+          python3 -c '
+          import xml.etree.ElementTree as ET
+          NS = "http://android.com"
+          ET.register_namespace("android", NS)
+          m = ET.Element("manifest", {"package": "de.foxifilm.app", f"{{{NS}}}versionCode": "1", f"{{{NS}}}versionName": "1.0"})
+          ET.SubElement(m, "uses-sdk", {f"{{{NS}}}minSdkVersion": "21", f"{{{NS}}}targetSdkVersion": "22"})
+          ET.SubElement(m, "uses-permission", {f"{{{NS}}}name": "android.permission.INTERNET"})
+          app = ET.SubElement(m, "application", {f"{{{NS}}}label": "Foxifilm", f"{{{NS}}}icon": "@drawable/ic", f"{{{NS}}}theme": "@android:style/Theme.NoTitleBar.Fullscreen", f"{{{NS}}}hardwareAccelerated": "true"})
+          act = ET.SubElement(app, "activity", {f"{{{NS}}}name": ".MainActivity", f"{{{NS}}}screenOrientation": "landscape", f"{{{NS}}}configChanges": "orientation|screenSize|keyboardHidden", f"{{{NS}}}exported": "true"})
+          inf = ET.SubElement(act, "intent-filter")
+          ET.SubElement(inf, "action", {f"{{{NS}}}name": "android.intent.action.MAIN"})
+          ET.SubElement(inf, "category", {f"{{{NS}}}name": "android.intent.category.LAUNCHER"})
+          ET.SubElement(inf, "category", {f"{{{NS}}}name": "android.intent.category.LEANBACK_LAUNCHER"})
+          ET.ElementTree(m).write("AndroidManifest.xml", encoding="utf-8", xml_declaration=True)
+          '
+
           cat << 'EOF' > src/de/foxifilm/app/MainActivity.java
           package de.foxifilm.app;
           import android.app.Activity;
@@ -82,6 +72,7 @@ jobs:
               }
           }
           EOF
+
           $ANDROID_HOME/build-tools/34.0.0/aapt package -f -m -J build/gen -M AndroidManifest.xml -S res -I $ANDROID_HOME/platforms/android-22/android.jar
           javac -source 1.8 -target 1.8 -d build/obj -classpath $ANDROID_HOME/platforms/android-22/android.jar build/gen/de/foxifilm/app/R.java src/de/foxifilm/app/MainActivity.java
           $ANDROID_HOME/build-tools/34.0.0/d8 --min-api 21 --output build/apk build/obj/de/foxifilm/app/*.class
