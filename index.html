@@ -337,6 +337,32 @@
       window.focus();
       initButtons();
     };
+        // Hintergrundbild alle 10 Minuten automatisch wechseln
+    (function() {
+      var bilder = [
+        'Gemini_Generated_Image_1b9cb11b9cb11b9c.jpeg',
+        'Gemini_Generated_Image_i4yly6i4yly6i4yl.jpeg',
+        'Gemini_Generated_Image_kbr28bkbr28bkbr2.jpeg',
+        'Gemini_Generated_Image_vikf0vvikf0vvikf.jpeg',
+        'Gemini_Generated_Image_va3uscva3uscva3u.jpeg',
+        'Gemini_Generated_Image_iu45mfiu45mfiu45.jpeg',
+        'Gemini_Generated_Image_qmmdw4qmmdw4qmmd.jpeg',
+        'Gemini_Generated_Image_qef23jqef23jqef2.jpeg'
+      ];
+
+      function aktualisiereHintergrund() {
+        var zehnMinutenBlock = Math.floor(Date.now() / (1000 * 60 * 10));
+        var bildIndex = zehnMinutenBlock % bilder.length;
+        var heroBg = document.querySelector('.hero-bg');
+        if (heroBg) {
+          heroBg.style.backgroundImage = "url('" + bilder[bildIndex] + "')";
+        }
+      }
+
+      aktualisiereHintergrund();
+      setInterval(aktualisiereHintergrund, 30000);
+    })();
+
   </script>
 </body>
 </html>
